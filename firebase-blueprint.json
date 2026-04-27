@@ -1,0 +1,64 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Represents an item in the inventory.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "quantity": { "type": "number" },
+        "buyingPrice": { "type": "number" },
+        "sellingPrice": { "type": "number" },
+        "supplierName": { "type": "string" },
+        "sku": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "category", "quantity", "buyingPrice", "sellingPrice"]
+    },
+    "Sale": {
+      "title": "Sale",
+      "description": "Represents a completed sales transaction.",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "quantity": { "type": "number" },
+        "unitPrice": { "type": "number" },
+        "totalPrice": { "type": "number" },
+        "profit": { "type": "number" },
+        "staffId": { "type": "string" },
+        "staffName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["productId", "quantity", "totalPrice", "profit", "staffId", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Information about staff or admin users.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "staff"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "role"]
+    }
+  },
+  "firestore": {
+    "products": {
+      "schema": "Product",
+      "description": "Stored products in inventory"
+    },
+    "sales": {
+      "schema": "Sale",
+      "description": "Recorded sales transactions"
+    },
+    "users": {
+      "schema": "UserProfile",
+      "description": "System users and their roles"
+    }
+  }
+}
