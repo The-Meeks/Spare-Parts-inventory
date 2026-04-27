@@ -1,11 +1,39 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Button } from '../components/UI';
-import { TrendingUp, ShieldCheck, Zap, PackageSearch } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Button, Input } from '../components/UI';
+import { TrendingUp, ShieldCheck, Zap, PackageSearch, Mail, Lock, User, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export const Login: React.FC = () => {
-  const { signIn } = useAuth();
+  const { signIn, signInWithEmail, signUp } = useAuth();
+  const [isRegister, setIsRegister] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: ''
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (isRegister) {
+        if (!formData.name) throw new Error("Name is required");
+        await signUp(formData.email, formData.password, formData.name);
+      } else {
+        await signInWithEmail(formData.email, formData.password);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -53,12 +81,12 @@ export const Login: React.FC = () => {
 
         {/* Right Side: Login Card */}
         <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="bg-white rounded-[2.5rem] shadow-2xl shadow-indigo-100 p-8 md:p-16 border border-slate-100 relative overflow-hidden"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-[2.5rem] shadow-2xl shadow-indigo-100 p-8 md:p-12 border border-slate-100 relative overflow-hidden"
         >
           <div className="absolute top-0 right-0 p-8 opacity-5">
-             <PackageSearch size={220} />
+             <PackageSearch size={180} />
           </div>
 
           <div className="relative">
@@ -67,22 +95,114 @@ export const Login: React.FC = () => {
               Secure portal
             </div>
             
-            <h3 className="text-3xl font-black text-slate-900 mb-2">Welcome Back</h3>
-            <p className="text-slate-500 mb-12">Sign in to access your dashboard and manage sales.</p>
-            
-            <div className="space-y-4">
-              <button 
-                onClick={signIn}
-                className="w-full flex items-center justify-center gap-4 bg-white border-2 border-slate-100 hover:border-indigo-600 hover:bg-indigo-50/50 py-5 rounded-2xl transition-all duration-300 group"
-              >
-                <img src="https://www.google.com/favicon.ico" alt="Google" className="w-6 h-6 grayscale group-hover:grayscale-0 transition-all" />
-                <span className="font-bold text-slate-700 group-hover:text-indigo-600">Continue with Google Account</span>
-              </button>
-            </div>
+            <h3 className="text-3xl font-black text-slate-900 mb-2">
+              {isRegister ? 'Join Us' : 'Welcome Back'}
+            </h3>
+            <p className="text-slate-500 mb-8">
+              {isRegister ? 'Create your staff account and start managing.' : 'Sign in to access your dashboard and manage sales.'}
+            </p>
 
-            <p className="text-center mt-12 text-slate-400 text-sm">
-              Protected by military-grade encryption. <br />
-              Need help? <a href="#" className="font-bold text-indigo-600 hover:underline">Contact Support</a>
+            <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+              <AnimatePresence mode="wait">
+                {isRegister && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="space-y-1.5 mb-4">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Full Name</label>
+                      <div className="relative group">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
+                        <input 
+                          type="text"
+                          required={isRegister}
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          className="w-full bg-slate-50 border-2 border-slate-50 focus:border-indigo-600 focus:bg-white outline-none rounded-2xl py-3.5 pl-12 pr-4 transition-all font-medium text-slate-700"
+                          placeholder="John Doe"
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Email Address</label>
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
+                  <input 
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full bg-slate-50 border-2 border-slate-50 focus:border-indigo-600 focus:bg-white outline-none rounded-2xl py-3.5 pl-12 pr-4 transition-all font-medium text-slate-700"
+                    placeholder="john@example.com"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Password</label>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
+                  <input 
+                    type="password"
+                    required
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full bg-slate-50 border-2 border-slate-50 focus:border-indigo-600 focus:bg-white outline-none rounded-2xl py-3.5 pl-12 pr-4 transition-all font-medium text-slate-700"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div className="text-red-500 text-xs font-bold bg-red-50 p-3 rounded-xl border border-red-100">
+                  {error}
+                </div>
+              )}
+
+              <Button 
+                type="submit" 
+                className="w-full py-4 rounded-2xl text-lg font-black shadow-lg shadow-indigo-200" 
+                disabled={loading}
+              >
+                {loading ? (
+                  <Loader2 className="animate-spin" size={24} />
+                ) : (
+                  isRegister ? 'Create Account' : 'Sign In'
+                )}
+              </Button>
+            </form>
+
+            <div className="relative flex items-center py-4">
+              <div className="flex-grow border-t border-slate-100"></div>
+              <span className="flex-shrink mx-4 text-slate-400 text-xs font-bold uppercase tracking-widest">or</span>
+              <div className="flex-grow border-t border-slate-100"></div>
+            </div>
+            
+            <button 
+              onClick={signIn}
+              className="w-full flex items-center justify-center gap-4 bg-white border-2 border-slate-100 hover:border-indigo-600 hover:bg-slate-50 py-4 rounded-2xl transition-all duration-300 group mb-8"
+            >
+              <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 grayscale group-hover:grayscale-0 transition-all" />
+              <span className="font-bold text-slate-700 group-hover:text-indigo-600">Continue with Google</span>
+            </button>
+
+            <p className="text-center text-slate-500 text-sm">
+              {isRegister ? 'Already have an account?' : "Don't have an account yet?"} <br />
+              <button 
+                onClick={() => {
+                  setIsRegister(!isRegister);
+                  setError(null);
+                }}
+                className="font-black text-indigo-600 hover:underline mt-1"
+              >
+                {isRegister ? 'Sign In Instead' : 'Register as New Member'}
+              </button>
             </p>
           </div>
         </motion.div>

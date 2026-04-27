@@ -4,7 +4,10 @@ import {
   User, 
   signInWithPopup, 
   GoogleAuthProvider, 
-  signOut 
+  signOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, getDocFromServer } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
@@ -15,6 +18,8 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   signIn: () => Promise<void>;
+  signInWithEmail: (email: string, pass: string) => Promise<void>;
+  signUp: (email: string, pass: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -87,12 +92,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInWithEmail = async (email: string, pass: string) => {
+    await signInWithEmailAndPassword(auth, email, pass);
+  };
+
+  const signUp = async (email: string, pass: string, name: string) => {
+    const { user } = await createUserWithEmailAndPassword(auth, email, pass);
+    await updateProfile(user, { displayName: name });
+    
+    // Create profile immediately to avoid lag
+    const docRef = doc(db, 'users', user.uid);
+    const defaultRole = email === 'benedictpas01@gmail.com' ? UserRole.ADMIN : UserRole.STAFF;
+    const newProfile: Omit<UserProfile, 'id'> = {
+      name: name,
+      email: email,
+      role: defaultRole,
+      createdAt: new Date(),
+    };
+    await setDoc(docRef, newProfile);
+    setProfile({ id: user.uid, ...newProfile } as UserProfile);
+  };
+
   const logout = async () => {
     await signOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, logout }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signInWithEmail, signUp, logout }}>
       {children}
     </AuthContext.Provider>
   );
