@@ -139,3 +139,27 @@ export const Select: React.FC<SelectProps> = ({ label, options, error, className
     </div>
   );
 };
+
+export const Badge: React.FC<{ children: React.ReactNode; variant?: string; className?: string }> = ({ 
+  children, 
+  variant = 'primary', 
+  className 
+}) => {
+  const variants: any = {
+    primary: 'bg-indigo-50 text-indigo-700 ring-indigo-600/10',
+    secondary: 'bg-slate-50 text-slate-600 ring-slate-500/10',
+    success: 'bg-emerald-50 text-emerald-700 ring-emerald-600/10',
+    danger: 'bg-red-50 text-red-700 ring-red-600/10',
+    warning: 'bg-amber-50 text-amber-700 ring-amber-600/10',
+  };
+
+  return (
+    <span className={cn(
+      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset",
+      variants[variant] || variants.primary,
+      className
+    )}>
+      {children}
+    </span>
+  );
+};

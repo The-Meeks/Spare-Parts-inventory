@@ -11,9 +11,11 @@ import { Inventory } from './pages/Inventory';
 import { Sales } from './pages/Sales';
 import { Reports } from './pages/Reports';
 import { Settings } from './pages/Settings';
+import { Users } from './pages/Users';
 import { Login } from './pages/Login';
 import { Menu } from 'lucide-react';
 import { cn } from './lib/utils';
+import { UserRole } from './types';
 
 const AppContent = () => {
   const { user, profile, loading } = useAuth();
@@ -36,12 +38,15 @@ const AppContent = () => {
   }
 
   const renderContent = () => {
+    const isAdmin = profile?.role === UserRole.ADMIN;
+    
     switch (activeTab) {
       case 'dashboard': return <Dashboard />;
       case 'inventory': return <Inventory />;
       case 'sales': return <Sales />;
-      case 'reports': return <Reports />;
+      case 'reports': return isAdmin ? <Reports /> : <Dashboard />;
       case 'settings': return <Settings />;
+      case 'users': return isAdmin ? <Users /> : <Dashboard />;
       default: return <Dashboard />;
     }
   };

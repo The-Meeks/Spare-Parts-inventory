@@ -169,8 +169,9 @@ export const Dashboard: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent className="h-80 pt-6">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
+            <div className="w-full h-full min-h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1}/>
@@ -192,7 +193,8 @@ export const Dashboard: React.FC = () => {
                 <Area type="monotone" dataKey="profit" stroke="#10b981" fillOpacity={0} strokeWidth={3} />
               </AreaChart>
             </ResponsiveContainer>
-          </CardContent>
+          </div>
+        </CardContent>
         </Card>
 
         <Card>
@@ -236,19 +238,21 @@ export const Dashboard: React.FC = () => {
             <h3 className="text-lg font-bold text-slate-900">Stock Status</h3>
           </CardHeader>
           <CardContent className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={[
-                { name: 'Healthy', value: products.filter(p => p.quantity > settings.lowStockThreshold).length, fill: '#6366f1' },
-                { name: 'Low', value: lowStock, fill: '#f59e0b' },
-                { name: 'Out', value: outOfStock, fill: '#ef4444' }
-              ]}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} />
-                <Tooltip cursor={{fill: '#f8fafc'}} />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="w-full h-full min-h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={[
+                  { name: 'Healthy', value: products.filter(p => p.quantity > settings.lowStockThreshold).length, fill: '#6366f1' },
+                  { name: 'Low', value: lowStock, fill: '#f59e0b' },
+                  { name: 'Out', value: outOfStock, fill: '#ef4444' }
+                ]}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                  <YAxis axisLine={false} tickLine={false} />
+                  <Tooltip cursor={{fill: '#f8fafc'}} />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 

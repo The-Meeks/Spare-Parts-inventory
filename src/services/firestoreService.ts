@@ -194,6 +194,27 @@ export const updateBusinessSettings = async (settings: any) => {
   }
 };
 
+export const getUsers = async () => {
+  const path = 'users';
+  try {
+    const q = query(collection(db, path), orderBy('name', 'asc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return [];
+  }
+};
+
+export const updateUserRole = async (userId: string, role: UserRole) => {
+  const path = `users/${userId}`;
+  try {
+    return await updateDoc(doc(db, 'users', userId), { role });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+};
+
 export const getSalesByRange = async (startDate: Date, endDate: Date): Promise<Sale[]> => {
   const path = 'sales';
   try {

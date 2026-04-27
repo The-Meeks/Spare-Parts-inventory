@@ -8,10 +8,12 @@ import {
   LogOut,
   Menu,
   X,
-  TrendingUp
+  TrendingUp,
+  Users
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
+import { UserRole } from '../types';
 
 interface NavItemProps {
   icon: React.ElementType;
@@ -51,9 +53,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpe
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'inventory', label: 'Inventory', icon: Package },
     { id: 'sales', label: 'Sales', icon: ShoppingCart },
-    { id: 'reports', label: 'Reports', icon: BarChart3 },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
+
+  if (profile?.role === UserRole.ADMIN) {
+    navItems.splice(3, 0, { id: 'reports', label: 'Reports', icon: BarChart3 });
+    navItems.splice(4, 0, { id: 'users', label: 'Staff', icon: Users });
+  }
 
   return (
     <>
