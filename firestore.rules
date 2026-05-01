@@ -29,15 +29,17 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isVerified() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             getUserData().role == 'admin';
+      return isVerified() && (
+        (request.auth.token.email == 'benedictpas01@gmail.com' || request.auth.token.email == 'director@aldapas.com') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin')
+      );
     }
 
     function isStaff() {
-      return isVerified() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             (getUserData().role == 'staff' || getUserData().role == 'admin');
+      return isVerified() && (
+        (request.auth.token.email == 'benedictpas01@gmail.com' || request.auth.token.email == 'director@aldapas.com') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (getUserData().role == 'staff' || getUserData().role == 'admin'))
+      );
     }
 
     function incoming() {

@@ -116,6 +116,15 @@ export const Inventory: React.FC = () => {
     return p.name.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Loading Inventory...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -158,7 +167,17 @@ export const Inventory: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredProducts.map((p) => (
+                {filteredProducts.length === 0 ? (
+                  <tr>
+                    <td colSpan={isAdmin ? 5 : 4} className="px-8 py-12 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <Package size={32} className="text-slate-200" />
+                        <p className="text-slate-400 font-medium">No products found in inventory.</p>
+                        {searchTerm && <p className="text-xs text-slate-400">Try adjusting your search terms.</p>}
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredProducts.map((p) => (
                   <motion.tr 
                     layout
                     key={p.id} 
