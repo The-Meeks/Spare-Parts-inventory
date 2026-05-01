@@ -55,7 +55,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfile({ id: user.uid, ...docSnap.data() } as UserProfile);
         } else {
           // Create new user profile as staff by default
-          const defaultRole = user.email === 'benedictpas01@gmail.com' ? UserRole.ADMIN : UserRole.STAFF;
+          const isAdminEmail = user.email === 'benedictpas01@gmail.com' || user.email === 'director@aldapas.com';
+          const defaultRole = isAdminEmail ? UserRole.ADMIN : UserRole.STAFF;
           const newProfile: Omit<UserProfile, 'id'> = {
             name: user.displayName || 'Anonymous User',
             email: user.email || '',
@@ -102,7 +103,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Create profile immediately to avoid lag
     const docRef = doc(db, 'users', user.uid);
-    const defaultRole = email === 'benedictpas01@gmail.com' ? UserRole.ADMIN : UserRole.STAFF;
+    const isAdminEmail = email === 'benedictpas01@gmail.com' || email === 'director@aldapas.com';
+    const defaultRole = isAdminEmail ? UserRole.ADMIN : UserRole.STAFF;
     const newProfile: Omit<UserProfile, 'id'> = {
       name: name,
       email: email,
