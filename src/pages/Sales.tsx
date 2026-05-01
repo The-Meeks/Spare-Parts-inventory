@@ -20,9 +20,9 @@ import {
   Select 
 } from '../components/UI';
 import { 
-  getProducts, 
   recordSale, 
-  getSales 
+  subscribeToProducts,
+  subscribeToSales
 } from '../services/firestoreService';
 import { Product, Sale } from '../types';
 import { formatCurrency } from '../lib/utils';
@@ -45,16 +45,20 @@ export const Sales: React.FC = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    const unsubProducts = subscribeToProducts((p) => {
+      setProducts(p);
+      setLoading(false);
+    });
 
-  const fetchData = async () => {
-    setLoading(true);
-    const [p, s] = await Promise.all([getProducts(), getSales()]);
-    setProducts(p);
-    setSales(s);
-    setLoading(false);
-  };
+    const unsubSales = subscribeToSales((s) => {
+      setSales(s);
+    });
+
+    return () => {
+      unsubProducts();
+      unsubSales();
+    };
+  }, []);
 
   const activeProduct = products.find(p => p.id === selectedProductId);
 
@@ -92,9 +96,6 @@ export const Sales: React.FC = () => {
       // Reset form
       setSelectedProductId('');
       setQuantity(1);
-      
-      // Refresh
-      fetchData();
     } catch (err: any) {
       setError(err.message || 'An error occurred while recording the sale.');
     } finally {

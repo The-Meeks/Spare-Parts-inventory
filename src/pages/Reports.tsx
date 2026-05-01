@@ -21,8 +21,8 @@ import {
   Select 
 } from '../components/UI';
 import { 
-  getProducts, 
-  getSalesByRange 
+  subscribeToProducts, 
+  subscribeToSalesByRange 
 } from '../services/firestoreService';
 import { Product, Sale } from '../types';
 import { 
@@ -35,7 +35,7 @@ import {
 } from 'date-fns';
 import { formatCurrency } from '../lib/utils';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
 export const Reports: React.FC = () => {
@@ -46,11 +46,6 @@ export const Reports: React.FC = () => {
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
-    fetchReportData();
-  }, [dateRange]);
-
-  const fetchReportData = async () => {
-    setLoading(true);
     let start = startOfMonth(new Date());
     let end = endOfMonth(new Date());
 
@@ -59,17 +54,25 @@ export const Reports: React.FC = () => {
       end = endOfToday();
     } else if (dateRange === '3months') {
       start = startOfMonth(subMonths(new Date(), 3));
+      end = endOfMonth(new Date());
     }
 
-    const [s, p] = await Promise.all([
-      getSalesByRange(start, end),
-      getProducts()
-    ]);
+    setLoading(true);
     
-    setSales(s);
-    setProducts(p);
-    setLoading(false);
-  };
+    const unsubProducts = subscribeToProducts((p) => {
+      setProducts(p);
+    });
+
+    const unsubSales = subscribeToSalesByRange(start, end, (s) => {
+      setSales(s);
+      setLoading(false);
+    });
+
+    return () => {
+      unsubProducts();
+      unsubSales();
+    };
+  }, [dateRange]);
 
   const totalRevenue = sales.reduce((acc, s) => acc + s.totalPrice, 0);
   const totalProfit = sales.reduce((acc, s) => acc + s.profit, 0);
@@ -79,11 +82,11 @@ export const Reports: React.FC = () => {
     setExporting(true);
     const data = sales.map(s => ({
       'Date': format(s.createdAt.toDate ? s.createdAt.toDate() : new Date(s.createdAt), 'yyyy-MM-dd HH:mm'),
-      'Product': s.productName,
-      'Quantity': s.quantity,
+      'Item Name': s.productName,
+      'Quantity Sold': s.quantity,
       'Unit Price': s.unitPrice,
       'Total Price': s.totalPrice,
-      'Profit': s.profit,
+      'Gross Profit': s.profit,
       'Salesperson': s.staffName
     }));
 
@@ -96,7 +99,7 @@ export const Reports: React.FC = () => {
 
   const exportToPDF = () => {
     setExporting(true);
-    const doc = new jsPDF() as any;
+    const doc = new jsPDF();
     
     doc.setFontSize(20);
     doc.text("Pasbest Ventures - Sales Report", 14, 22);
@@ -104,17 +107,24 @@ export const Reports: React.FC = () => {
     doc.text(`Generated on: ${format(new Date(), 'PPP p')}`, 14, 30);
     doc.text(`Period: ${dateRange.toUpperCase()}`, 14, 37);
 
-    const tableColumn = ["Date", "Product", "Qty", "Total", "Profit", "By"];
+    const tableColumn = ["Date", "Item Name", "Qty", "Unit Price", "Total Price", "Salesperson"];
     const tableRows = sales.map(s => [
       format(s.createdAt.toDate ? s.createdAt.toDate() : new Date(s.createdAt), 'MM/dd HH:mm'),
       s.productName,
-      s.quantity,
+      s.quantity.toString(),
+      formatCurrency(s.unitPrice),
       formatCurrency(s.totalPrice),
-      formatCurrency(s.profit),
       s.staffName
     ]);
 
-    doc.autoTable(tableColumn, tableRows, { startY: 45 });
+    autoTable(doc, { 
+      startY: 45,
+      head: [tableColumn],
+      body: tableRows,
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229] }, // indigo-600
+      styles: { fontSize: 8 }
+    });
     doc.save(`Sales_Report_${format(new Date(), 'yyyyMMdd')}.pdf`);
     setExporting(false);
   };

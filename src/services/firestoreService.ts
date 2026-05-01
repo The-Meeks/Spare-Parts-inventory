@@ -14,7 +14,8 @@ import {
   Timestamp,
   serverTimestamp,
   increment,
-  runTransaction
+  runTransaction,
+  onSnapshot
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { Product, Sale, UserRole } from '../types';
@@ -77,6 +78,17 @@ export const getProducts = async (): Promise<Product[]> => {
     handleFirestoreError(error, OperationType.LIST, path);
     return [];
   }
+};
+
+export const subscribeToProducts = (callback: (products: Product[]) => void) => {
+  const path = 'products';
+  const q = query(collection(db, path), orderBy('name', 'asc'));
+  return onSnapshot(q, (snapshot) => {
+    const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+    callback(products);
+  }, (error) => {
+    handleFirestoreError(error, OperationType.LIST, path);
+  });
 };
 
 export const addProduct = async (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -166,6 +178,17 @@ export const getSales = async (limitCount = 50): Promise<Sale[]> => {
   }
 };
 
+export const subscribeToSales = (callback: (sales: Sale[]) => void, limitCount = 50) => {
+  const path = 'sales';
+  const q = query(collection(db, path), orderBy('createdAt', 'desc'), limit(limitCount));
+  return onSnapshot(q, (snapshot) => {
+    const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sale));
+    callback(sales);
+  }, (error) => {
+    handleFirestoreError(error, OperationType.LIST, path);
+  });
+};
+
 // Settings
 export const getBusinessSettings = async () => {
   const path = 'settings/business';
@@ -230,4 +253,24 @@ export const getSalesByRange = async (startDate: Date, endDate: Date): Promise<S
     handleFirestoreError(error, OperationType.LIST, path);
     return [];
   }
+};
+
+export const subscribeToSalesByRange = (
+  startDate: Date, 
+  endDate: Date, 
+  callback: (sales: Sale[]) => void
+) => {
+  const path = 'sales';
+  const q = query(
+    collection(db, path), 
+    where('createdAt', '>=', startDate),
+    where('createdAt', '<=', endDate),
+    orderBy('createdAt', 'desc')
+  );
+  return onSnapshot(q, (snapshot) => {
+    const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sale));
+    callback(sales);
+  }, (error) => {
+    handleFirestoreError(error, OperationType.LIST, path);
+  });
 };

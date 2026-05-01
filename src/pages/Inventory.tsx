@@ -21,11 +21,11 @@ import {
   Select 
 } from '../components/UI';
 import { 
-  getProducts, 
   addProduct, 
   updateProduct, 
   deleteProduct,
-  getBusinessSettings
+  getBusinessSettings,
+  subscribeToProducts
 } from '../services/firestoreService';
 import { Product, UserRole } from '../types';
 import { formatCurrency } from '../lib/utils';
@@ -52,13 +52,20 @@ export const Inventory: React.FC = () => {
     sellingPrice: 0
   });
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    const [p, s] = await Promise.all([getProducts(), getBusinessSettings()]);
-    setProducts(p);
-    if (s) setSettings(s as any);
-    setLoading(false);
-  };
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const s = await getBusinessSettings();
+      if (s) setSettings(s as any);
+    };
+    fetchSettings();
+
+    const unsub = subscribeToProducts((p) => {
+      setProducts(p);
+      setLoading(false);
+    });
+
+    return () => unsub();
+  }, []);
 
   const handleOpenModal = (product?: Product) => {
     if (product) {
@@ -93,7 +100,6 @@ export const Inventory: React.FC = () => {
         await addProduct(formData);
       }
       setIsModalOpen(false);
-      fetchProducts();
     } catch (error) {
       console.error(error);
     } finally {
@@ -104,7 +110,6 @@ export const Inventory: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (!isAdmin || !confirm('Are you sure you want to delete this product?')) return;
     await deleteProduct(id);
-    fetchProducts();
   };
 
   const filteredProducts = products.filter(p => {

@@ -21,7 +21,7 @@ import {
 } from 'recharts';
 import { format } from 'date-fns';
 import { Card, CardHeader, CardContent } from '../components/UI';
-import { getProducts, getSales, getBusinessSettings } from '../services/firestoreService';
+import { subscribeToProducts, subscribeToSales, getBusinessSettings } from '../services/firestoreService';
 import { Product, Sale } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { motion } from 'motion/react';
@@ -61,18 +61,25 @@ export const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      const [p, s, st] = await Promise.all([
-        getProducts(), 
-        getSales(100),
-        getBusinessSettings()
-      ]);
-      setProducts(p);
-      setSales(s);
+    const fetchSettings = async () => {
+      const st = await getBusinessSettings();
       if (st) setSettings(st as any);
-      setLoading(false);
     };
-    fetchData();
+    fetchSettings();
+
+    const unsubProducts = subscribeToProducts((p) => {
+      setProducts(p);
+    });
+
+    const unsubSales = subscribeToSales((s) => {
+      setSales(s);
+      setLoading(false);
+    }, 100);
+
+    return () => {
+      unsubProducts();
+      unsubSales();
+    };
   }, []);
 
   const totalProducts = products.length;
@@ -205,13 +212,17 @@ export const Dashboard: React.FC = () => {
             <div className="divide-y divide-slate-100">
               {sales.slice(0, 5).map((sale) => (
                 <div key={sale.id} className="p-4 flex justify-between items-center hover:bg-slate-50 transition-colors">
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm font-bold text-slate-900">{sale.productName}</p>
-                    <p className="text-xs text-slate-500">
-                      {format(sale.createdAt.toDate ? sale.createdAt.toDate() : new Date(sale.createdAt), 'MMM dd, h:mm a')}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-[10px] text-slate-500 font-medium">
+                        {format(sale.createdAt.toDate ? sale.createdAt.toDate() : new Date(sale.createdAt), 'MMM dd, h:mm a')}
+                      </p>
+                      <span className="text-[10px] text-slate-300">•</span>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">{sale.staffName}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right ml-4">
                     <p className="text-sm font-bold text-slate-900">{formatCurrency(sale.totalPrice)}</p>
                     <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-tight">+{formatCurrency(sale.profit)}</p>
                   </div>
