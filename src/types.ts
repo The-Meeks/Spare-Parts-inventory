@@ -31,6 +31,7 @@ export interface Sale {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  buyingPrice: number;
   profit: number;
   staffId: string;
   staffName: string;

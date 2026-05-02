@@ -74,9 +74,9 @@ export const Reports: React.FC = () => {
     };
   }, [dateRange]);
 
-  const totalRevenue = sales.reduce((acc, s) => acc + s.totalPrice, 0);
-  const totalProfit = sales.reduce((acc, s) => acc + s.profit, 0);
-  const totalItems = sales.reduce((acc, s) => acc + s.quantity, 0);
+  const totalRevenue = sales.reduce((acc, s) => acc + (s.totalPrice || 0), 0);
+  const totalProfit = sales.reduce((acc, s) => acc + (s.profit || 0), 0);
+  const totalItems = sales.reduce((acc, s) => acc + (s.quantity || 0), 0);
 
   const exportToExcel = () => {
     setExporting(true);

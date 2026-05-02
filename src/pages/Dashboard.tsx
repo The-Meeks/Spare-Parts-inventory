@@ -85,8 +85,8 @@ export const Dashboard: React.FC = () => {
   const totalProducts = products.length;
   const lowStock = products.filter(p => p.quantity > 0 && p.quantity <= settings.lowStockThreshold).length;
   const outOfStock = products.filter(p => p.quantity === 0).length;
-  const totalRevenue = sales.reduce((acc, sale) => acc + sale.totalPrice, 0);
-  const totalProfit = sales.reduce((acc, sale) => acc + sale.profit, 0);
+  const totalRevenue = sales.reduce((acc, sale) => acc + (sale.totalPrice || 0), 0);
+  const totalProfit = sales.reduce((acc, sale) => acc + (sale.profit || 0), 0);
 
   // Group sales by date for charts
   const salesByDate = sales.reduce((acc: any, sale) => {

@@ -22,7 +22,9 @@ import {
 import { 
   recordSale, 
   subscribeToProducts,
-  subscribeToSales
+  subscribeToSales,
+  updateSale,
+  deleteSale
 } from '../services/firestoreService';
 import { Product, Sale } from '../types';
 import { formatCurrency } from '../lib/utils';
@@ -43,6 +45,12 @@ export const Sales: React.FC = () => {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState('');
+
+  // Editing State
+  const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [editQuantity, setEditQuantity] = useState(0);
+  const [editUnitPrice, setEditUnitPrice] = useState(0);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     const unsubProducts = subscribeToProducts((p) => {
@@ -100,6 +108,46 @@ export const Sales: React.FC = () => {
       setError(err.message || 'An error occurred while recording the sale.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleOpenEdit = (sale: Sale) => {
+    setEditingSale(sale);
+    setEditQuantity(sale.quantity);
+    setEditUnitPrice(sale.unitPrice);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateSale = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSale) return;
+
+    try {
+      const totalPrice = editUnitPrice * editQuantity;
+      // Use buyingPrice from record if it exists, otherwise fallback to 0 or current product price
+      const costPrice = editingSale.buyingPrice || 0;
+      const profit = (editUnitPrice - costPrice) * editQuantity;
+
+      await updateSale(editingSale.id, {
+        quantity: editQuantity,
+        unitPrice: editUnitPrice,
+        totalPrice,
+        profit
+      });
+      setIsEditModalOpen(false);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteSale = async (sale: Sale) => {
+    if (!profile || profile.role !== 'admin') return;
+    if (window.confirm('Are you sure you want to delete this sale? This will restock the inventory.')) {
+      try {
+        await deleteSale(sale);
+      } catch (err) {
+        console.error(err);
+      }
     }
   };
 
@@ -243,11 +291,12 @@ export const Sales: React.FC = () => {
                       <th className="px-6 py-4">Date & Time</th>
                       <th className="px-6 py-4">Processed By</th>
                       <th className="px-6 py-4 text-right">Total Amount</th>
+                      {profile?.role === 'admin' && <th className="px-6 py-4 text-center">Actions</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {sales.map((sale) => (
-                      <tr key={sale.id} className="hover:bg-slate-50/50 transition-colors">
+                      <tr key={sale.id} className="hover:bg-slate-50/50 transition-colors group">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
@@ -255,7 +304,7 @@ export const Sales: React.FC = () => {
                             </div>
                             <div>
                               <p className="text-sm font-bold text-slate-900">{sale.productName}</p>
-                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Quantity: {sale.quantity}</p>
+                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Quantity: {sale.quantity} @ {formatCurrency(sale.unitPrice)}</p>
                             </div>
                           </div>
                         </td>
@@ -278,6 +327,24 @@ export const Sales: React.FC = () => {
                         <td className="px-6 py-4 text-right">
                           <p className="text-sm font-bold text-slate-900">{formatCurrency(sale.totalPrice)}</p>
                         </td>
+                        {profile?.role === 'admin' && (
+                          <td className="px-6 py-4">
+                            <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button 
+                                onClick={() => handleOpenEdit(sale)}
+                                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors"
+                              >
+                                <FileText size={16} />
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteSale(sale)}
+                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-slate-100 rounded-lg transition-colors"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     ))}
                     {sales.length === 0 && !loading && (
@@ -297,6 +364,73 @@ export const Sales: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* Edit Sale Modal */}
+      <AnimatePresence>
+        {isEditModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+            >
+              <CardHeader className="bg-indigo-600 text-white">
+                <h3 className="font-bold">Edit Transaction</h3>
+                <p className="text-xs text-indigo-100">Correcting a past record</p>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <div>
+                  <label className="text-sm font-bold text-slate-700 mb-1 block">Item</label>
+                  <p className="text-sm text-slate-900 font-bold">{editingSale?.productName}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-bold text-slate-700 mb-1 block">Quantity Sold</label>
+                    <Input 
+                      type="number"
+                      value={editQuantity}
+                      onChange={(e) => setEditQuantity(parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-bold text-slate-700 mb-1 block">Unit Price</label>
+                    <Input 
+                      type="number"
+                      value={editUnitPrice}
+                      onChange={(e) => setEditUnitPrice(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 rounded-xl space-y-1">
+                  <div className="flex justify-between text-xs text-slate-500 font-bold">
+                    <span>RECALCULATED TOTAL</span>
+                    <span>{formatCurrency(editUnitPrice * editQuantity)}</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1" 
+                    onClick={() => setIsEditModalOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    className="flex-1" 
+                    onClick={handleUpdateSale}
+                  >
+                    Update Record
+                  </Button>
+                </div>
+              </CardContent>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

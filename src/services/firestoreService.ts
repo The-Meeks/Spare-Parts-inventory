@@ -151,6 +151,7 @@ export const recordSale = async (
       const saleRef = doc(collection(db, salesPath));
       transaction.set(saleRef, {
         ...sale,
+        buyingPrice,
         profit,
         createdAt: serverTimestamp(),
       });
@@ -187,6 +188,42 @@ export const subscribeToSales = (callback: (sales: Sale[]) => void, limitCount =
   }, (error) => {
     handleFirestoreError(error, OperationType.LIST, path);
   });
+};
+
+export const updateSale = async (id: string, saleData: Partial<Sale>) => {
+  const path = `sales/${id}`;
+  try {
+    const saleRef = doc(db, 'sales', id);
+    // If quantity or price changed, we should ideally check stock, 
+    // but for simple edits we just update the sale record.
+    await updateDoc(saleRef, {
+      ...saleData,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+};
+
+export const deleteSale = async (sale: Sale) => {
+  const path = `sales/${sale.id}`;
+  try {
+    await runTransaction(db, async (transaction) => {
+      const saleRef = doc(db, 'sales', sale.id);
+      const productRef = doc(db, 'products', sale.productId);
+      
+      // Update inventory (restocking)
+      transaction.update(productRef, {
+        stock: increment(sale.quantity),
+        updatedAt: serverTimestamp()
+      });
+      
+      // Delete sale
+      transaction.delete(saleRef);
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
 };
 
 // Settings
