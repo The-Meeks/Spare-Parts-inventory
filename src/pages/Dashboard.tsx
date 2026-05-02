@@ -21,10 +21,16 @@ import {
 } from 'recharts';
 import { format } from 'date-fns';
 import { Card, CardHeader, CardContent } from '../components/UI';
-import { subscribeToProducts, subscribeToSales, getBusinessSettings } from '../services/firestoreService';
+import { 
+  subscribeToProducts, 
+  subscribeToSales, 
+  getBusinessSettings,
+  subscribeToSalesByRange
+} from '../services/firestoreService';
 import { Product, Sale } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { motion } from 'motion/react';
+import { startOfMonth, endOfMonth } from 'date-fns';
 
 const StatCard = ({ label, value, icon: Icon, color, trend, trendValue }: any) => (
   <Card className="relative overflow-hidden group">
@@ -71,10 +77,13 @@ export const Dashboard: React.FC = () => {
       setProducts(p);
     });
 
-    const unsubSales = subscribeToSales((s) => {
+    const start = startOfMonth(new Date());
+    const end = endOfMonth(new Date());
+
+    const unsubSales = subscribeToSalesByRange(start, end, (s) => {
       setSales(s);
       setLoading(false);
-    }, 100);
+    });
 
     return () => {
       unsubProducts();
@@ -83,17 +92,39 @@ export const Dashboard: React.FC = () => {
   }, []);
 
   const totalProducts = products.length;
+  const productsMap = products.reduce((acc: any, p) => ({ ...acc, [p.id]: p }), {});
+  
   const lowStock = products.filter(p => p.quantity > 0 && p.quantity <= settings.lowStockThreshold).length;
   const outOfStock = products.filter(p => p.quantity === 0).length;
+  
   const totalRevenue = sales.reduce((acc, sale) => acc + (sale.totalPrice || 0), 0);
-  const totalProfit = sales.reduce((acc, sale) => acc + (sale.profit || 0), 0);
+  
+  const totalProfit = sales.reduce((acc, sale) => {
+    if (sale.profit !== undefined && sale.profit !== null && !isNaN(sale.profit)) {
+      return acc + sale.profit;
+    }
+    // Fallback for legacy sales records without profit field
+    const product = productsMap[sale.productId];
+    if (product) {
+      const legacyProfit = sale.totalPrice - (product.buyingPrice * sale.quantity);
+      return acc + (legacyProfit || 0);
+    }
+    return acc;
+  }, 0);
 
   // Group sales by date for charts
   const salesByDate = sales.reduce((acc: any, sale) => {
     const date = format(sale.createdAt.toDate ? sale.createdAt.toDate() : new Date(sale.createdAt), 'MMM dd');
     if (!acc[date]) acc[date] = { date, revenue: 0, profit: 0 };
-    acc[date].revenue += sale.totalPrice;
-    acc[date].profit += sale.profit;
+    acc[date].revenue += (sale.totalPrice || 0);
+    
+    let saleProfit = sale.profit;
+    if (saleProfit === undefined || saleProfit === null || isNaN(saleProfit)) {
+      const product = productsMap[sale.productId];
+      saleProfit = product ? (sale.totalPrice - (product.buyingPrice * sale.quantity)) : 0;
+    }
+    
+    acc[date].profit += (saleProfit || 0);
     return acc;
   }, {});
 

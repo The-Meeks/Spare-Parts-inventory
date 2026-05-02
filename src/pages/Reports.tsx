@@ -74,8 +74,23 @@ export const Reports: React.FC = () => {
     };
   }, [dateRange]);
 
+  const productsMap = products.reduce((acc: any, p) => ({ ...acc, [p.id]: p }), {});
+  
   const totalRevenue = sales.reduce((acc, s) => acc + (s.totalPrice || 0), 0);
-  const totalProfit = sales.reduce((acc, s) => acc + (s.profit || 0), 0);
+  
+  const totalProfit = sales.reduce((acc, s) => {
+    if (s.profit !== undefined && s.profit !== null && !isNaN(s.profit)) {
+      return acc + s.profit;
+    }
+    // Fallback for legacy sales records
+    const product = productsMap[s.productId];
+    if (product) {
+      const legacyProfit = s.totalPrice - (product.buyingPrice * s.quantity);
+      return acc + (legacyProfit || 0);
+    }
+    return acc;
+  }, 0);
+
   const totalItems = sales.reduce((acc, s) => acc + (s.quantity || 0), 0);
 
   const exportToExcel = () => {
