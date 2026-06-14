@@ -19,18 +19,25 @@ import {
   BarChart,
   Bar
 } from 'recharts';
-import { format } from 'date-fns';
+import { 
+  format, 
+  startOfMonth, 
+  endOfMonth, 
+  startOfToday, 
+  endOfToday, 
+  subMonths 
+} from 'date-fns';
 import { Card, CardHeader, CardContent } from '../components/UI';
 import { 
   subscribeToProducts, 
   subscribeToSales, 
   getBusinessSettings,
-  subscribeToSalesByRange
+  subscribeToSalesByRange,
+  subscribeToAllSales
 } from '../services/firestoreService';
 import { Product, Sale } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { motion } from 'motion/react';
-import { startOfMonth, endOfMonth } from 'date-fns';
 
 const StatCard = ({ label, value, icon: Icon, color, trend, trendValue }: any) => (
   <Card className="relative overflow-hidden group">
@@ -61,6 +68,7 @@ const StatCard = ({ label, value, icon: Icon, color, trend, trendValue }: any) =
 );
 
 export const Dashboard: React.FC = () => {
+  const [dateRange, setDateRange] = useState('all');
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [settings, setSettings] = useState({ lowStockThreshold: 10, currency: 'Ksh' });
@@ -72,24 +80,47 @@ export const Dashboard: React.FC = () => {
       if (st) setSettings(st as any);
     };
     fetchSettings();
+  }, []);
 
+  useEffect(() => {
+    setLoading(true);
     const unsubProducts = subscribeToProducts((p) => {
       setProducts(p);
     });
 
-    const start = startOfMonth(new Date());
-    const end = endOfMonth(new Date());
+    let unsubSales: () => void;
 
-    const unsubSales = subscribeToSalesByRange(start, end, (s) => {
-      setSales(s);
-      setLoading(false);
-    });
+    if (dateRange === 'all') {
+      unsubSales = subscribeToAllSales((s) => {
+        setSales(s);
+        setLoading(false);
+      });
+    } else {
+      let start = startOfMonth(new Date());
+      let end = endOfMonth(new Date());
+
+      if (dateRange === 'today') {
+        start = startOfToday();
+        end = endOfToday();
+      } else if (dateRange === '3months') {
+        start = startOfMonth(subMonths(new Date(), 3));
+        end = endOfMonth(new Date());
+      } else if (dateRange === 'month') {
+        start = startOfMonth(new Date());
+        end = endOfMonth(new Date());
+      }
+
+      unsubSales = subscribeToSalesByRange(start, end, (s) => {
+        setSales(s);
+        setLoading(false);
+      });
+    }
 
     return () => {
       unsubProducts();
       unsubSales();
     };
-  }, []);
+  }, [dateRange]);
 
   const totalProducts = products.length;
   const productsMap = products.reduce((acc: any, p) => ({ ...acc, [p.id]: p }), {});
@@ -153,9 +184,32 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-8 pb-12">
-      <div>
-        <h2 className="text-3xl font-bold text-slate-900 tracking-tight">System Dashboard</h2>
-        <p className="text-slate-500 mt-1">Real-time overview of your business performance.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">System Dashboard</h2>
+          <p className="text-slate-500 mt-1">Real-time overview of your business performance.</p>
+        </div>
+
+        <div className="flex items-center gap-2 bg-white p-1 rounded-2xl border border-slate-100 shadow-sm self-start sm:self-auto">
+          {[
+            { id: 'today', label: 'Today' },
+            { id: 'month', label: 'This Month' },
+            { id: '3months', label: '3 Months' },
+            { id: 'all', label: 'All Time' }
+          ].map((range) => (
+            <button
+              key={range.id}
+              onClick={() => setDateRange(range.id)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
+                dateRange === range.id 
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' 
+                  : 'text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              {range.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <motion.div 

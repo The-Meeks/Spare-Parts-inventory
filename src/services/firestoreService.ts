@@ -190,6 +190,17 @@ export const subscribeToSales = (callback: (sales: Sale[]) => void, limitCount =
   });
 };
 
+export const subscribeToAllSales = (callback: (sales: Sale[]) => void) => {
+  const path = 'sales';
+  const q = query(collection(db, path), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snapshot) => {
+    const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sale));
+    callback(sales);
+  }, (error) => {
+    handleFirestoreError(error, OperationType.LIST, path);
+  });
+};
+
 export const updateSale = async (id: string, saleData: Partial<Sale>) => {
   const path = `sales/${id}`;
   try {

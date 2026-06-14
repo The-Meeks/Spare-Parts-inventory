@@ -22,7 +22,8 @@ import {
 } from '../components/UI';
 import { 
   subscribeToProducts, 
-  subscribeToSalesByRange 
+  subscribeToSalesByRange,
+  subscribeToAllSales
 } from '../services/firestoreService';
 import { Product, Sale } from '../types';
 import { 
@@ -46,27 +47,39 @@ export const Reports: React.FC = () => {
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
-    let start = startOfMonth(new Date());
-    let end = endOfMonth(new Date());
-
-    if (dateRange === 'today') {
-      start = startOfToday();
-      end = endOfToday();
-    } else if (dateRange === '3months') {
-      start = startOfMonth(subMonths(new Date(), 3));
-      end = endOfMonth(new Date());
-    }
-
     setLoading(true);
     
     const unsubProducts = subscribeToProducts((p) => {
       setProducts(p);
     });
 
-    const unsubSales = subscribeToSalesByRange(start, end, (s) => {
-      setSales(s);
-      setLoading(false);
-    });
+    let unsubSales: () => void;
+
+    if (dateRange === 'all') {
+      unsubSales = subscribeToAllSales((s) => {
+        setSales(s);
+        setLoading(false);
+      });
+    } else {
+      let start = startOfMonth(new Date());
+      let end = endOfMonth(new Date());
+
+      if (dateRange === 'today') {
+        start = startOfToday();
+        end = endOfToday();
+      } else if (dateRange === '3months') {
+        start = startOfMonth(subMonths(new Date(), 3));
+        end = endOfMonth(new Date());
+      } else if (dateRange === 'month') {
+        start = startOfMonth(new Date());
+        end = endOfMonth(new Date());
+      }
+
+      unsubSales = subscribeToSalesByRange(start, end, (s) => {
+        setSales(s);
+        setLoading(false);
+      });
+    }
 
     return () => {
       unsubProducts();
@@ -153,17 +166,22 @@ export const Reports: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-3 bg-white p-1 rounded-2xl border border-slate-100 shadow-sm">
-          {['today', 'month', '3months'].map((range) => (
+          {[
+            { id: 'today', label: 'Today' },
+            { id: 'month', label: 'This Month' },
+            { id: '3months', label: 'Last 3 Months' },
+            { id: 'all', label: 'All Time' }
+          ].map((range) => (
             <button
-              key={range}
-              onClick={() => setDateRange(range)}
+              key={range.id}
+              onClick={() => setDateRange(range.id)}
               className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
-                dateRange === range 
+                dateRange === range.id 
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' 
                   : 'text-slate-500 hover:bg-slate-50'
               }`}
             >
-              {range === '3months' ? 'Last 3 Months' : range}
+              {range.label}
             </button>
           ))}
         </div>
